@@ -24,8 +24,8 @@
 ## Demo
 
 <p align="center">
-  <img src="assets/video/odi-promo.gif" alt="Odi promo animation" width="720"><br>
-  <a href="assets/video/odi-promo.mp4">Full promo video (MP4, 1080p)</a>
+  <img src="assets/video/odi-promo-v2.gif" alt="Odi promo animation" width="720"><br>
+  <a href="assets/video/odi-promo-v2.mp4">Full promo video (MP4, 1080p)</a>
 </p>
 
 ## The idea

@@ -16,8 +16,8 @@
 ## Tanıtım
 
 <p align="center">
-  <img src="assets/video/odi-promo.gif" alt="Odi tanıtım animasyonu" width="720"><br>
-  <a href="assets/video/odi-promo.mp4">Tam tanıtım videosu (MP4, 1080p)</a>
+  <img src="assets/video/odi-promo-v2.gif" alt="Odi tanıtım animasyonu" width="720"><br>
+  <a href="assets/video/odi-promo-v2.mp4">Tam tanıtım videosu (MP4, 1080p)</a>
 </p>
 
 ## Fikir
