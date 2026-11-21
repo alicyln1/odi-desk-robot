@@ -36,7 +36,7 @@ Odi is a wellbeing and productivity assistant, **not a medical device**: it neve
 
 | Focus | Voice | Apps | Hardware |
 |---|---|---|---|
-| ![Focus](assets/img/feature-focus.png) | ![Voice](assets/img/feature-voice.png) | ![Apps](assets/img/feature-apps.png) | ![Hardware](assets/img/feature-hardware.png) |
+| ![Focus](assets/img/feature-focus-calm.png) | ![Voice](assets/img/feature-voice.png) | ![Apps](assets/img/feature-apps.png) | ![Hardware](assets/img/feature-hardware.png) |
 | Five focus techniques (Pomodoro, 52/17, Flowtime, Ultradian 90, Deep Work), alarms and countdowns | "Hey Odi" wake-word data pipeline, Turkish speech pipeline (STT → LLM tools → TTS), push-to-talk | Native SwiftUI and Jetpack Compose apps with live sync and offline queue | ESP32-S3, 2.0" IPS face, I2S audio, 7 servos, 1S2P Li-Po, BLE + Wi-Fi |
 
 ## What I built
