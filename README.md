@@ -50,6 +50,8 @@ Odi is a wellbeing and productivity assistant, **not a medical device**: it neve
 - **On-device wake word:** a custom "Hey Odi" streaming model (microWakeWord, TensorFlow → int8 TFLite Micro, 62 KB, ~25k MACs per 30 ms inference) trained on a synthetic Turkish data pipeline with hard negatives ("Hey Kodi", "Hey Odin", …); threshold chosen from my own false-accept / false-reject evaluation. Streaming voice over WSS with Opus audio.
 - Safety by design: servo power is cut by a hardware heartbeat latch (< 100 ms), independent of Wi-Fi, apps and AI; servo start-up is sequenced and the current budget follows battery voltage; the microphone has a hardware kill switch.
 - Bring-up console (esp_console) with drivers for the charger, fuel gauge, IMU, servo driver and distance sensors, ready for first hardware tests.
+- **Over-the-air updates:** dual-slot OTA with SHA-256 and version checks, battery and session guards, self-test on first boot and automatic rollback; progress and failure reasons are reported to the apps.
+- **Per-device X.509 identity:** the key pair is generated on the robot and never leaves it; certificates are signed by an environment-specific intermediate CA (offline root), the broker accepts only mutual-TLS clients, and certificates renew themselves before expiry.
 
 <p align="center">
   <img src="assets/firmware/face-blink.gif" width="200" alt="Blink">
@@ -67,6 +69,14 @@ Odi is a wellbeing and productivity assistant, **not a medical device**: it neve
 | Head board, routed (front) | Head board, routed (back) | Body board (placement) |
 |---|---|---|
 | ![Head board front](assets/hardware/head-board-routed-front.png) | ![Head board back](assets/hardware/head-board-routed-back.png) | ![Body board](assets/hardware/body-board-placement.png) |
+
+### Phone base station
+- A separate dock (ESP32-C3, load cell + HX711, NFC tag) detects when the phone is put down and switches Odi into **Deep Focus**.
+- Own 2-layer PCB (ERC/DRC clean) and a support-free printable enclosure; firmware with a filtered dock-state machine, drift tracking and fault detection, and a bonded BLE GATT service. Odi keeps a power-aware BLE link to it (connected in Focus, periodic reads in Eco).
+
+| Station board | Station enclosure |
+|---|---|
+| ![Station board](assets/hardware/station-board.png) | ![Station enclosure](assets/hardware/station-enclosure.png) |
 
 ### Mechanical design
 - Parametric enclosure modeled in **OpenSCAD**: 148 mm tall, 412 g, tip-over angle ≥ 24°; internal layout kept independent from the outer shell so the shell can be redesigned freely.
@@ -89,11 +99,16 @@ Odi is a wellbeing and productivity assistant, **not a medical device**: it neve
   <img src="assets/app/ios-history.png" width="18%" alt="History">
   <img src="assets/app/ios-settings.png" width="18%" alt="Settings">
 </p>
+<p align="center">
+  <img src="assets/app/ios-ota-update.png" width="18%" alt="Firmware update progress">
+  <img src="assets/app/ios-station-settings.png" width="18%" alt="Base station settings">
+</p>
 <p align="center"><sub>iOS app in demo-data mode (Turkish UI).</sub></p>
 
 ### Cloud and web
 - **Supabase** (Postgres, Row Level Security, Realtime, pg_cron) with versioned migrations tested against an in-memory Postgres.
-- **TypeScript** MQTT bridge, a virtual robot for end-to-end tests, and a **voice gateway** (WebSocket audio, streaming STT/TTS, LLM tool calls mapped to device commands, safety layer).
+- Deployment ready for an EU VPS: Docker Compose stack (Mosquitto with mTLS and per-device ACLs, Caddy with automatic certificates), hardened server setup script, health endpoints, backups.
+- **TypeScript** MQTT bridge, a device-certificate provisioning service, a virtual robot for end-to-end tests, and a **voice gateway** (WebSocket audio, streaming STT/TTS, LLM tool calls mapped to device commands, safety layer).
 - **Next.js** web panel: dashboard, sessions, alarms, history, setup wizard and a privacy center with data export and scheduled deletion.
 
 ## Validation
@@ -137,6 +152,7 @@ flowchart LR
   MQ <--> BR
   BR <--> DB
   FW <-->|"WSS audio"| VG
+  ST["Phone base station<br/>ESP32-C3 · load cell"] <-->|"BLE"| FW
   IOS <-->|"BLE setup · health summary"| FW
   AND <-->|"BLE setup · health summary"| FW
   IOS <--> DB
@@ -148,12 +164,12 @@ flowchart LR
 
 | Area | Technologies |
 |---|---|
-| Firmware | C++17, ESP-IDF 5.5, FreeRTOS, NimBLE, PlatformIO, Wokwi, Unity tests |
+| Firmware | C++17, ESP-IDF 5.5, FreeRTOS, NimBLE (peripheral + central), mbedTLS, OTA with rollback, PlatformIO, Wokwi, Unity tests |
 | Electronics | KiCad 10, 4-layer PCB, SPICE (ngspice), ESP32-S3, BQ25895, TPS61022, TPS63031, MAX17048, PCA9685, I2S MEMS mics |
 | Mechanics | OpenSCAD, Python geometry checks, Bambu Lab A1 (PLA / PETG / TPU) |
 | iOS | Swift 6, SwiftUI, Swift Concurrency, CoreBluetooth, HealthKit, ActivityKit, Swift Testing |
 | Android | Kotlin 2.4, Jetpack Compose, Coroutines/Flow, Room, DataStore, WorkManager, Health Connect, JUnit |
-| Backend | Supabase (Postgres, RLS, Realtime, pg_cron), TypeScript, Node.js, MQTT, Zod, WebSocket |
+| Backend | Supabase (Postgres, RLS, Realtime, pg_cron), TypeScript, Node.js, MQTT, Zod, WebSocket, X.509 PKI, Docker Compose, Caddy |
 | Web | Next.js 16, React, TypeScript, Vitest |
 | AI and voice | TensorFlow, microWakeWord, TFLite Micro (on-device wake word), Opus audio, Whisper / cloud STT, LLM tool calling, Piper / cloud TTS |
 | Quality | 1,100+ automated tests across firmware, backend, web and apps; CI with docs and unit checks |
