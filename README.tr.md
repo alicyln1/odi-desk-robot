@@ -28,8 +28,9 @@ Odi bir iyi oluş ve üretkenlik asistanıdır, **tıbbi cihaz değildir**: teş
 
 ## Neler yaptım
 
-- **Gömülü yazılım:** ESP32-S3 için ESP-IDF 5.5 (C++) firmware; donanımdan bağımsız çekirdek kütüphane (firmware, Wokwi simülasyonu ve birim testlerinde ortak); 320 × 240 ekranda 30 kare/sn animasyonlu yüz; beş odak tekniği, alarmlar, yeniden başlatmada süren geri sayımlar, güç modları; NimBLE ile BLE kurulum servisi (sayı karşılaştırmalı güvenli eşleştirme); sürümlü MQTT cihaz protokolü; servo beslemesini < 100 ms'de kesen donanımsal emniyet kilidi ve donanımsal mikrofon kapatma anahtarı.
-- **Elektronik ve PCB:** KiCad'de iki adet 4 katmanlı özel kart (50 × 38 mm kafa kartı, 55 × 40 mm gövde güç kartı); çip tabanlı güç tasarımı (güç yollu Li-ion şarj, 5 V / 3 A servo yükseltici, 3,3 V buck-boost, yakıt ölçer, IMU, 16 kanallı servo sürücü, ters polariteye korumalı yük anahtarı); 0 hatalı elektriksel kural denetimi, radyo altında kesintisiz toprak, üretici kılavuzuna uygun anten bölgesi.
+- **Gömülü yazılım:** ESP32-S3 için ESP-IDF 5.5 (C++) firmware; donanımdan bağımsız çekirdek kütüphane (firmware, Wokwi simülasyonu ve birim testlerinde ortak); 320 × 240 ekranda 30 kare/sn animasyonlu yüz; beş odak tekniği, alarmlar, yeniden başlatmada süren geri sayımlar, güç modları; NimBLE ile BLE kurulum servisi (sayı karşılaştırmalı güvenli eşleştirme); sürümlü MQTT cihaz protokolü; servo beslemesini < 100 ms'de kesen donanımsal emniyet kilidi ve donanımsal mikrofon kapatma anahtarı; cihaz üstünde çalışan özel **"Hey Odi"** uyandırma modeli (TensorFlow → int8 TFLite Micro, 62 KB; sentetik Türkçe veri hattı ve zor olumsuz örneklerle eğitildi); Opus sesle WSS üzerinden akan sesli konuşma; ilk donanım denemeleri için sürücüler ve bring-up konsolu.
+- **Elektronik ve PCB:** KiCad'de iki adet 4 katmanlı özel kart (50 × 38 mm kafa kartı, 55 × 40 mm gövde güç kartı); çip tabanlı güç tasarımı (güç yollu Li-ion şarj, 5 V / 3 A servo yükseltici, 3,3 V buck-boost, yakıt ölçer, IMU, 16 kanallı servo sürücü, ters polariteye korumalı yük anahtarı); kafa kartı 4 katmanda tamamen yollandı (ERC ve DRC 0 hata), radyo altında kesintisiz toprak, üretici kılavuzuna uygun anten bölgesi.
+- **Devre doğrulama:** parça siparişinden önce kritik devreler SPICE'ta (ngspice, Python ile betiklenmiş) tolerans ve pil gerilimi taramalarıyla sınandı: 6 devre, 24 ölçüt, tümü payla geçti. Simülasyon dört gerçek tasarım hatası buldu (servo kalkış akımı 11 A, yük anahtarı açılış tepesi, I2C yükselme süresi, emniyet kilidi payı); hepsi şemada ve firmware'de düzeltildi.
 - **Mekanik:** OpenSCAD'de parametrik kasa (148 mm, 412 g, devrilme açısı ≥ 24°); her eklem açısında otomatik çakışma, kütle ve ağırlık merkezi denetimi; Bambu Lab A1 için baskıya hazır tablalar, ısıyla gömülen vida yuvaları ve servo tutucuları.
 - **Mobil:** iOS (Swift, SwiftUI) ve Android (Kotlin, Jetpack Compose) için eşdeğer iki yerel uygulama; canlı cihaz durumu, iyimser güncelleme, çevrimdışı komut kuyruğu; BLE kurulum akışı, HealthKit / Health Connect özetleri (ham sağlık verisi telefondan çıkmaz), Derin Odak, Canlı Etkinlik ve süregelen bildirim, arka plan eşitleme; iki platform için tek kaynaktan üretilen tasarım belirteçleri ve 600'den fazla metin.
 - **Bulut ve web:** Supabase (Postgres, satır düzeyi güvenlik, Realtime, pg_cron); TypeScript MQTT köprüsü, uçtan uca testler için sanal robot, sesli ağ geçidi (STT → LLM araçları → TTS, güvenlik katmanı); Next.js web paneli (pano, seanslar, alarmlar, geçmiş, kurulum sihirbazı, veri indirme ve silme içeren gizlilik merkezi).
@@ -45,7 +46,7 @@ Görseller, kart render'ları, uygulama ekranları ve mimari şema için [İngil
 
 ## Durum
 
-Prototip aşaması: firmware, uygulamalar, arka uç ve iki PCB tasarımı tamam ve simülasyonda sınandı; sırada ilk donanım denemeleri var.
+Prototip aşaması: firmware, uygulamalar, arka uç, PCB tasarımları ve devre simülasyonları tamam; sırada ilk donanım denemeleri (P0) ve uyandırma modelinin gerçek kayıtlarla yeniden eğitimi var.
 
 ## Lisans
 

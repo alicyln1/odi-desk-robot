@@ -13,6 +13,7 @@
   <a href="README.tr.md">Türkçe</a> ·
   <a href="#demo">Demo</a> ·
   <a href="#what-i-built">What I built</a> ·
+  <a href="#validation">Validation</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="#tech-stack">Tech stack</a>
 </p>
@@ -37,7 +38,7 @@ Odi is a wellbeing and productivity assistant, **not a medical device**: it neve
 | Focus | Voice | Apps | Hardware |
 |---|---|---|---|
 | ![Focus](assets/img/feature-focus-calm.png) | ![Voice](assets/img/feature-voice.png) | ![Apps](assets/img/feature-apps.png) | ![Hardware](assets/img/feature-hardware.png) |
-| Five focus techniques (Pomodoro, 52/17, Flowtime, Ultradian 90, Deep Work), alarms and countdowns | "Hey Odi" wake-word data pipeline, Turkish speech pipeline (STT → LLM tools → TTS), push-to-talk | Native SwiftUI and Jetpack Compose apps with live sync and offline queue | ESP32-S3, 2.0" IPS face, I2S audio, 7 servos, 1S2P Li-Po, BLE + Wi-Fi |
+| Five focus techniques (Pomodoro, 52/17, Flowtime, Ultradian 90, Deep Work), alarms and countdowns | On-device "Hey Odi" wake-word model (62 KB int8), Turkish speech pipeline (STT → LLM tools → TTS), push-to-talk | Native SwiftUI and Jetpack Compose apps with live sync and offline queue | ESP32-S3, 2.0" IPS face, I2S audio, 7 servos, 1S2P Li-Po, BLE + Wi-Fi |
 
 ## What I built
 
@@ -46,7 +47,9 @@ Odi is a wellbeing and productivity assistant, **not a medical device**: it neve
 - 30 fps animated face on a 320 × 240 ST7789 display; expressions designed frame by frame.
 - Session engine with five focus techniques, alarms, countdowns that survive reboots, reminder scheduler and power modes (Focus / Eco / Sleep).
 - **BLE setup service** (NimBLE GATT, LE Secure Connections with numeric comparison, bonded reconnection) and an MQTT device protocol with versioned JSON messages and golden test fixtures.
-- Safety by design: servo power is cut by a hardware heartbeat latch (< 100 ms), independent of Wi-Fi, apps and AI; the microphone has a hardware kill switch.
+- **On-device wake word:** a custom "Hey Odi" streaming model (microWakeWord, TensorFlow → int8 TFLite Micro, 62 KB, ~25k MACs per 30 ms inference) trained on a synthetic Turkish data pipeline with hard negatives ("Hey Kodi", "Hey Odin", …); threshold chosen from my own false-accept / false-reject evaluation. Streaming voice over WSS with Opus audio.
+- Safety by design: servo power is cut by a hardware heartbeat latch (< 100 ms), independent of Wi-Fi, apps and AI; servo start-up is sequenced and the current budget follows battery voltage; the microphone has a hardware kill switch.
+- Bring-up console (esp_console) with drivers for the charger, fuel gauge, IMU, servo driver and distance sensors, ready for first hardware tests.
 
 <p align="center">
   <img src="assets/firmware/face-blink.gif" width="200" alt="Blink">
@@ -59,11 +62,11 @@ Odi is a wellbeing and productivity assistant, **not a medical device**: it neve
 ### Electronics and PCB design
 - Two custom **4-layer PCBs** designed in **KiCad**: a 50 × 38 mm head board (ESP32-S3 module, display, I2S microphones and amplifier) and a 55 × 40 mm body power board.
 - Chip-down power design: Li-ion charger with power path, 5 V / 3 A boost for the servos, 3.3 V buck-boost, fuel gauge, IMU, 16-channel PWM servo driver, reverse-polarity protected load switch.
-- Electrical rules check with zero errors, continuous ground plane under the radio, antenna keep-out per the module vendor's layout guide, keyed board-to-board harness.
+- Head board fully routed on 4 layers (signal / solid ground / power / signal) with zero ERC and DRC errors; continuous ground plane under the radio, antenna keep-out per the module vendor's layout guide, keyed board-to-board harness.
 
-| Head board (front) | Head board (back) | Body board (placement) |
+| Head board, routed (front) | Head board, routed (back) | Body board (placement) |
 |---|---|---|
-| ![Head board front](assets/hardware/head-board-front.png) | ![Head board back](assets/hardware/head-board-back.png) | ![Body board](assets/hardware/body-board-placement.png) |
+| ![Head board front](assets/hardware/head-board-routed-front.png) | ![Head board back](assets/hardware/head-board-routed-back.png) | ![Body board](assets/hardware/body-board-placement.png) |
 
 ### Mechanical design
 - Parametric enclosure modeled in **OpenSCAD**: 148 mm tall, 412 g, tip-over angle ≥ 24°; internal layout kept independent from the outer shell so the shell can be redesigned freely.
@@ -92,6 +95,23 @@ Odi is a wellbeing and productivity assistant, **not a medical device**: it neve
 - **Supabase** (Postgres, Row Level Security, Realtime, pg_cron) with versioned migrations tested against an in-memory Postgres.
 - **TypeScript** MQTT bridge, a virtual robot for end-to-end tests, and a **voice gateway** (WebSocket audio, streaming STT/TTS, LLM tool calls mapped to device commands, safety layer).
 - **Next.js** web panel: dashboard, sessions, alarms, history, setup wizard and a privacy center with data export and scheduled deletion.
+
+## Validation
+
+Before ordering any parts, I checked the critical circuits in **SPICE** (ngspice, scripted from Python) with parameter sweeps over component tolerances and battery voltage: **6 circuits, 24 pass/fail criteria, all passing** with a stated margin. The simulations found four real design problems, which I fixed in the schematic and firmware before layout:
+
+| Finding | Fix |
+|---|---|
+| Servo start-up inrush of 11 A would brown out the 3.3 V rail | Bulk capacitance, soft start, sequenced servo enable and a battery-voltage current budget in firmware → 5.3 A peak |
+| Battery load switch turn-on spike | Gate RC slew control → 4.4 A peak, < 0.5 mJ switching energy |
+| I2C rise time too slow across the neck harness | Stronger pull-ups → 254 ns (limit 300 ns) |
+| Safety latch could release on a single missed heartbeat | Faster heartbeat and retuned latch timing → 22 ms margin, servo power off in ≤ 88 ms worst case |
+
+| Safety latch: servo power cut after the heartbeat stops | Servo inrush across tolerance corners |
+|---|---|
+| ![Safety latch timing](assets/validation/spice-safety-latch.png) | ![Servo inrush](assets/validation/spice-servo-inrush.png) |
+
+Other checks: automated mechanical collision, mass and tip-over checks; KiCad ERC/DRC; a P0 bring-up plan with a test step for every subsystem.
 
 ## Architecture
 
@@ -129,13 +149,13 @@ flowchart LR
 | Area | Technologies |
 |---|---|
 | Firmware | C++17, ESP-IDF 5.5, FreeRTOS, NimBLE, PlatformIO, Wokwi, Unity tests |
-| Electronics | KiCad 10, 4-layer PCB, ESP32-S3, BQ25895, TPS61022, TPS63031, PCA9685, I2S MEMS mics |
+| Electronics | KiCad 10, 4-layer PCB, SPICE (ngspice), ESP32-S3, BQ25895, TPS61022, TPS63031, MAX17048, PCA9685, I2S MEMS mics |
 | Mechanics | OpenSCAD, Python geometry checks, Bambu Lab A1 (PLA / PETG / TPU) |
 | iOS | Swift 6, SwiftUI, Swift Concurrency, CoreBluetooth, HealthKit, ActivityKit, Swift Testing |
 | Android | Kotlin 2.4, Jetpack Compose, Coroutines/Flow, Room, DataStore, WorkManager, Health Connect, JUnit |
 | Backend | Supabase (Postgres, RLS, Realtime, pg_cron), TypeScript, Node.js, MQTT, Zod, WebSocket |
 | Web | Next.js 16, React, TypeScript, Vitest |
-| AI and voice | Wake-word training pipeline (synthetic data), Whisper / cloud STT, LLM tool calling, Piper / cloud TTS |
+| AI and voice | TensorFlow, microWakeWord, TFLite Micro (on-device wake word), Opus audio, Whisper / cloud STT, LLM tool calling, Piper / cloud TTS |
 | Quality | 1,100+ automated tests across firmware, backend, web and apps; CI with docs and unit checks |
 
 ## Engineering principles
@@ -147,7 +167,7 @@ flowchart LR
 
 ## Status
 
-Prototype phase: firmware, apps, backend and both PCB designs are implemented and tested in simulation; first hardware bring-up is next.
+Prototype phase: firmware, apps, backend, PCB designs and circuit simulations are done; the first hardware bring-up (P0) is next, followed by retraining the wake word on real recordings.
 
 ## License
 
